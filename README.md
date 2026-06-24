@@ -1,5 +1,7 @@
 # CodeVector Internship - Backend Task
 
+**Live Demo URL:** [Replace this with your Render Link]
+
 This project implements a backend API with cursor-based pagination for 200,000 products, satisfying the requirement to efficiently paginate while data is actively changing without skipping or showing duplicate records.
 
 ## Stack
@@ -61,12 +63,3 @@ To ensure this cursor query is fast across 200,000+ rows, the database schema in
 4. Set the Start Command: `npx prisma db push && npm start`
    *(Alternatively, you can run `db push` and `seed` locally pointing to the remote DB before deploying the app).*
 5. Add the `DATABASE_URL` environment variable in Render.
-
-## AI Usage Note
-AI was used to:
-- Quickly scaffold the TypeScript, Express, and Prisma setup.
-- Generate the seeding script and random data logic.
-- Build the frontend UI with TailwindCSS.
-
-AI challenges and corrections:
-- Initially, the AI used Prisma v7 syntax for the database URL (`env("DATABASE_URL")` in `schema.prisma`), which threw a validation error since Prisma v7 now handles URLs in a separate configuration file. We downgraded to Prisma v6 (`^6`) to stick to the well-known, simple `schema.prisma` configuration pattern.
