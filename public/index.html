@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CodeVector Internship - Products</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { font-family: 'Inter', sans-serif; }
+    .loader {
+      border: 3px solid #f3f3f3;
+      border-top: 3px solid #3498db;
+      border-radius: 50%;
+      width: 24px;
+      height: 24px;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+  </style>
+</head>
+<body class="bg-gray-50 text-gray-800 antialiased min-h-screen flex flex-col">
+
+  <!-- Header -->
+  <header class="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-10">
+    <div class="max-w-5xl mx-auto px-4 py-4 flex flex-col sm:flex-row justify-between items-center gap-4">
+      <h1 class="text-xl font-bold text-gray-900 tracking-tight">CodeVector Products</h1>
+      
+      <!-- Filter -->
+      <div class="flex items-center gap-2">
+        <label for="categoryFilter" class="text-sm font-medium text-gray-600">Category:</label>
+        <select id="categoryFilter" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2">
+          <option value="">All Categories</option>
+          <option value="Electronics">Electronics</option>
+          <option value="Clothing">Clothing</option>
+          <option value="Home & Kitchen">Home & Kitchen</option>
+          <option value="Books">Books</option>
+          <option value="Sports & Outdoors">Sports & Outdoors</option>
+          <option value="Toys & Games">Toys & Games</option>
+          <option value="Beauty & Personal Care">Beauty & Personal Care</option>
+          <option value="Health & Household">Health & Household</option>
+          <option value="Automotive">Automotive</option>
+          <option value="Grocery">Grocery</option>
+        </select>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="flex-grow max-w-5xl mx-auto px-4 py-8 w-full">
+    
+    <div id="productGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+      <!-- Products injected here -->
+    </div>
+
+    <!-- Loading State & Load More -->
+    <div class="mt-8 flex flex-col items-center justify-center">
+      <div id="loadingIndicator" class="loader hidden mb-4"></div>
+      <button id="loadMoreBtn" class="hidden bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-6 rounded-lg transition-colors duration-200 shadow-sm focus:ring-4 focus:ring-blue-300">
+        Load More
+      </button>
+      <p id="noMoreText" class="hidden text-gray-500 text-sm mt-4">No more products to show.</p>
+    </div>
+
+  </main>
+
+  <!-- Template for product card -->
+  <template id="productTemplate">
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-5 hover:shadow-md transition-shadow duration-200 flex flex-col h-full">
+      <div class="flex justify-between items-start mb-2">
+        <span class="product-category text-xs font-semibold px-2.5 py-0.5 rounded bg-blue-100 text-blue-800"></span>
+        <span class="product-date text-xs text-gray-400" title=""></span>
+      </div>
+      <h3 class="product-name text-lg font-bold text-gray-900 mb-2 mt-2 leading-tight flex-grow"></h3>
+      <div class="mt-auto pt-4 border-t border-gray-100 flex justify-between items-center">
+        <span class="text-sm text-gray-500">Price</span>
+        <span class="product-price text-lg font-extrabold text-green-600"></span>
+      </div>
+      <div class="text-[0.65rem] text-gray-300 mt-2 text-right truncate product-id font-mono"></div>
+    </div>
+  </template>
+
+  <script>
+    let currentCursor = null;
+    let isLoading = false;
+    let hasMore = true;
+
+    const productGrid = document.getElementById('productGrid');
+    const loadMoreBtn = document.getElementById('loadMoreBtn');
+    const categoryFilter = document.getElementById('categoryFilter');
+    const loadingIndicator = document.getElementById('loadingIndicator');
+    const noMoreText = document.getElementById('noMoreText');
+    const template = document.getElementById('productTemplate');
+
+    async function fetchProducts(reset = false) {
+      if (isLoading) return;
+      
+      isLoading = true;
+      loadingIndicator.classList.remove('hidden');
+      if (reset) {
+        loadMoreBtn.classList.add('hidden');
+        noMoreText.classList.add('hidden');
+      }
+
+      try {
+        const category = categoryFilter.value;
+        const limit = 20;
+        let url = `/api/products?limit=${limit}`;
+        
+        if (category) url += `&category=${encodeURIComponent(category)}`;
+        if (currentCursor && !reset) url += `&cursor=${encodeURIComponent(currentCursor)}`;
+
+        const response = await fetch(url);
+        const data = await response.json();
+
+        if (reset) {
+          productGrid.innerHTML = '';
+        }
+
+        renderProducts(data.data);
+
+        currentCursor = data.nextCursor;
+        hasMore = !!currentCursor;
+
+        if (hasMore) {
+          loadMoreBtn.classList.remove('hidden');
+          noMoreText.classList.add('hidden');
+        } else {
+          loadMoreBtn.classList.add('hidden');
+          if (data.data.length > 0 || !reset) {
+             noMoreText.classList.remove('hidden');
+          } else if (reset && data.data.length === 0) {
+             productGrid.innerHTML = '<p class="col-span-full text-center text-gray-500 py-10">No products found for this category.</p>';
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching products:', error);
+        alert('Failed to load products. Please try again.');
+      } finally {
+        isLoading = false;
+        loadingIndicator.classList.add('hidden');
+      }
+    }
+
+    function renderProducts(products) {
+      const fragment = document.createDocumentFragment();
+      
+      products.forEach(product => {
+        const clone = template.content.cloneNode(true);
+        
+        clone.querySelector('.product-category').textContent = product.category;
+        clone.querySelector('.product-name').textContent = product.name;
+        clone.querySelector('.product-price').textContent = `$${parseFloat(product.price).toFixed(2)}`;
+        clone.querySelector('.product-id').textContent = `ID: ${product.id.split('-')[0]}...`;
+        
+        const date = new Date(product.createdAt);
+        const dateEl = clone.querySelector('.product-date');
+        dateEl.textContent = date.toLocaleDateString();
+        dateEl.title = date.toLocaleString(); // full date on hover
+
+        fragment.appendChild(clone);
+      });
+
+      productGrid.appendChild(fragment);
+    }
+
+    // Event Listeners
+    loadMoreBtn.addEventListener('click', () => fetchProducts(false));
+    
+    categoryFilter.addEventListener('change', () => {
+      currentCursor = null;
+      fetchProducts(true);
+    });
+
+    // Initial load
+    fetchProducts(true);
+  </script>
+</body>
+</html>
